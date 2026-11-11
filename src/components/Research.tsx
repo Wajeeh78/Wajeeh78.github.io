@@ -1,10 +1,12 @@
 import { Fragment } from 'react'
 import { motion } from 'framer-motion'
-import { Award, FileText, ArrowUpRight, MapPin } from 'lucide-react'
+import { FileText, ArrowUpRight, MapPin } from 'lucide-react'
+import Badge from './Badge'
 import Glass from './Glass'
 import SectionHead from './SectionHead'
-import { GithubIcon, GoogleScholarIcon } from './SocialIcons'
-import { me, publications, site, type Publication } from '../data/site'
+import { GithubIcon } from './SocialIcons'
+import ResearchProfiles from './ResearchProfiles'
+import { me, publications, type Publication } from '../data/site'
 import { jelly, openContact } from '../lib/motion'
 
 const published = publications.filter((pub) => pub.status === 'published')
@@ -45,9 +47,9 @@ function PaperCard({ pub, index }: { pub: Publication; index: number }) {
             {[pub.location, pub.year].filter(Boolean).join(' · ')}
           </p>
         )}
-        {who && <span className={`pub-role ${who === 'First author' ? 'lead' : ''}`}>{who}</span>}
+        {who && <Badge label={who} />}
         {pub.awards.map((award) => (
-          <span key={award} className="award"><Award size={13} /> {award}</span>
+          <Badge key={award} label={award} />
         ))}
       </div>
 
@@ -113,14 +115,11 @@ export default function Research() {
         build intelligent systems that stay secure, efficient, and deployable beyond the data center.
       </p>
 
+      <ResearchProfiles />
+
       <Group title="Publications" note="Peer-reviewed · Springer" items={published} />
       <Group title="Presented & upcoming" note="Presented at international conferences · in press" items={presented} />
 
-      {site.links.scholar && (
-        <a className="btn btn-glass section-cta" href={site.links.scholar} target="_blank" rel="noopener noreferrer">
-          <GoogleScholarIcon size={15} /> Google Scholar profile
-        </a>
-      )}
     </section>
   )
 }

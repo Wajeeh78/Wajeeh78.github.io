@@ -47,3 +47,40 @@ export function GoogleScholarIcon({ size = 20, className = '' }: IconProps) {
     </svg>
   )
 }
+
+/* Research profile logos, drawn in each brand's own colours. */
+
+export function ResearchGateIcon({ size = 20, className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect width="24" height="24" rx="5" fill="#00CCBB" />
+      <text x="4.2" y="17.6" fill="#fff" fontFamily="Georgia, 'Times New Roman', serif" fontSize="13.5" fontWeight="400">R</text>
+      <text x="13.4" y="11.4" fill="#fff" fontFamily="Georgia, 'Times New Roman', serif" fontSize="8.5" fontWeight="400">G</text>
+    </svg>
+  )
+}
+
+export function OrcidIcon({ size = 20, className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#A6CE39" />
+      <path
+        fill="#fff"
+        d="M7.369 4.378c.525 0 .947.431.947.947s-.422.947-.947.947a.95.95 0 0 1-.947-.947c0-.525.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.025-5.325 5.025h-3.919V7.416zm1.444 1.303v7.444h2.297c3.272 0 4.022-2.484 4.022-3.722 0-2.016-1.284-3.722-4.097-3.722h-2.222z"
+      />
+    </svg>
+  )
+}
+
+export function ScholarLogo({ size = 20, className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect width="24" height="24" rx="5" fill="#4285F4" />
+      <path
+        fill="#fff"
+        transform="translate(4 3.6) scale(0.667)"
+        d="M5.242 13.769L0 9.5 12 0l12 9.5-5.242 4.269C17.548 11.249 14.978 9.5 12 9.5c-2.977 0-5.548 1.748-6.758 4.269zM12 10a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"
+      />
+    </svg>
+  )
+}

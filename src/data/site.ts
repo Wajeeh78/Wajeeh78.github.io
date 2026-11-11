@@ -20,7 +20,9 @@ export const site = {
   links: {
     linkedin: 'https://www.linkedin.com/in/wajeeh-ahmed-a10a54213',
     github: 'https://github.com/Wajeeh78',
-    scholar: '',
+    scholar: 'https://scholar.google.com/citations?user=d9CfhnAAAAAJ&hl=en',
+    researchgate: 'https://www.researchgate.net/profile/Wajeeh-Ejaz-Raja',
+    orcid: 'https://orcid.org/0009-0002-2007-1562',
     aieys: 'https://ai-eys.com',
   },
 }
@@ -171,6 +173,89 @@ export const publications: Publication[] = [
     code: 'https://github.com/Wajeeh78/edge-smm-benchmarking',
   },
 ]
+
+/* ─── Case study ───────────────────────────────────────────────────────
+   Shown as interactive steps. In `architecture`, each row is one layer of
+   the system; clicking a box shows its `detail`. */
+
+export const caseStudy = {
+  id: 'tax-saathi',
+  title: 'Tax Saathi',
+  tagline: 'A smart tax-filing assistant for Pakistani salaried workers.',
+  context: 'Final Year Project · Team of 3',
+  status: 'In development',
+  steps: [
+    {
+      id: 'problem',
+      label: 'Problem',
+      title: 'Filing taxes should not need an agent.',
+      body: 'Salaried workers in Pakistan file on the FBR IRIS portal, which expects exact figures most people cannot work out alone. Many end up paying tax agents for what is mostly data entry.',
+      points: [
+        'Withholding and deduction data is spread across salary and bank certificates.',
+        'The IRIS portal asks for exact figures with little guidance.',
+        'Paid agents add cost and hand sensitive identity data to a third party.',
+      ],
+    },
+    {
+      id: 'solution',
+      label: 'Solution',
+      title: 'A guided flow that produces exact IRIS figures.',
+      body: "Tax Saathi walks users through their withholding and deductions, then turns that data into the exact numbers they enter on IRIS, in English and Urdu.",
+      points: [
+        'Bilingual guided filing in English and Urdu.',
+        'A rule-based tax engine driven by versioned rule files for Tax Years 2026–2027.',
+        'Planned: scanning salary and deduction certificates, and importing previous returns to cut manual entry.',
+      ],
+    },
+    {
+      id: 'architecture',
+      label: 'Architecture',
+      title: 'How it fits together.',
+      body: 'Click a part of the system to see what it does.',
+      points: [],
+    },
+    {
+      id: 'security',
+      label: 'Security',
+      title: 'Built for sensitive identity data.',
+      body: 'Tax data includes CNIC numbers and income, so security and consent were designed in from the start.',
+      points: [
+        'JWT authentication with email OTP verification, two-factor login, and password reset.',
+        'Role-based access for admins and taxpayers.',
+        'bcrypt password hashing and Fernet encryption of CNIC numbers at rest.',
+        'Consent management, identity-data deletion, and tax-year preparation tracking.',
+      ],
+    },
+    {
+      id: 'engineering',
+      label: 'Engineering',
+      title: 'Engineered to be maintained.',
+      body: 'The project is set up the way a production team would run it.',
+      points: [
+        'Tax rules live in versioned files, so a new tax year is a data change, not a code change.',
+        'PostgreSQL and a Mailpit test inbox run in Docker Compose for a one-command dev setup.',
+        'The backend is covered by pytest integration tests.',
+      ],
+    },
+  ],
+  architecture: [
+    [
+      { id: 'web', name: 'Web app', tech: 'React · TypeScript · Tailwind', detail: 'The main filing experience in the browser, with the guided English and Urdu flow.' },
+      { id: 'mobile', name: 'Mobile app', tech: 'Flutter', detail: 'The same guided flow on phones, talking to the same API.' },
+    ],
+    [
+      { id: 'api', name: 'REST API', tech: 'Python · FastAPI', detail: 'One backend for both apps. Handles accounts, filing data, and tax-year tracking, with role-based admin and taxpayer access.' },
+    ],
+    [
+      { id: 'auth', name: 'Auth & security', tech: 'JWT · OTP · 2FA · bcrypt · Fernet', detail: 'Login with email OTP and two-factor authentication, hashed passwords, and CNIC numbers encrypted at rest.' },
+      { id: 'engine', name: 'Tax engine', tech: 'Versioned rule files', detail: 'Rule-based calculation of exact IRIS figures. Each tax year (2026–2027) is its own rule file.' },
+    ],
+    [
+      { id: 'db', name: 'Database', tech: 'PostgreSQL', detail: 'Stores users, consent records, and filing data. Identity data can be deleted on request.' },
+    ],
+  ],
+  stack: ['Python', 'FastAPI', 'PostgreSQL', 'React', 'TypeScript', 'Tailwind CSS', 'Flutter', 'Docker', 'pytest'],
+}
 
 /* ─── Awards and certifications ───────────────────────────────────────
    `paper` is the id of a publication above; the card then links to it. */

@@ -1,15 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence, useScroll, useSpring, useTransform, useMotionTemplate } from 'framer-motion'
-import { Menu, X } from 'lucide-react'
+import { Menu, Moon, Sun, X } from 'lucide-react'
 import Glass from './Glass'
 import CvButton from './CvButton'
 import { jelly, liquid, scrollToSection } from '../lib/motion'
+import { THEME_EVENT, getTheme, setTheme, type Theme } from '../lib/theme'
 
 const navLinks = [
   { id: 'about', label: 'About' },
   { id: 'research', label: 'Research' },
-  { id: 'awards', label: 'Awards' },
+  { id: 'case-study', label: 'Case Study' },
   { id: 'journey', label: 'Experience' },
+  { id: 'awards', label: 'Awards' },
   { id: 'contact', label: 'Contact' },
 ]
 
@@ -28,6 +30,39 @@ function ScrollRail() {
         <span className="pac" />
       </motion.div>
     </div>
+  )
+}
+
+function ThemeToggle() {
+  const [theme, setLocal] = useState<Theme>(getTheme)
+  useEffect(() => {
+    const onChange = (event: Event) => setLocal((event as CustomEvent<Theme>).detail)
+    window.addEventListener(THEME_EVENT, onChange)
+    return () => window.removeEventListener(THEME_EVENT, onChange)
+  }, [])
+  const next = theme === 'dark' ? 'light' : 'dark'
+  return (
+    <motion.button
+      className="theme-toggle"
+      onClick={() => setTheme(next)}
+      aria-label={`Switch to ${next} mode`}
+      title={`Switch to ${next} mode`}
+      whileTap={{ scale: 0.88, rotate: -20 }}
+      transition={jelly}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={theme}
+          initial={{ opacity: 0, rotate: -60, scale: 0.6 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={{ opacity: 0, rotate: 60, scale: 0.6 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'inline-flex' }}
+        >
+          {theme === 'dark' ? <Moon size={17} /> : <Sun size={17} />}
+        </motion.span>
+      </AnimatePresence>
+    </motion.button>
   )
 }
 
@@ -66,16 +101,18 @@ export default function Navbar({ activeSection }: NavbarProps) {
               ))}
             </ul>
 
-            <div className="nav-cv"><CvButton compact /></div>
-
-            <button
+            <div className="nav-tools">
+              <ThemeToggle />
+              <div className="nav-cv"><CvButton compact /></div>
+              <button
               className="nav-toggle"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileOpen}
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+              </button>
+            </div>
           </nav>
         </Glass>
 
@@ -98,7 +135,7 @@ export default function Navbar({ activeSection }: NavbarProps) {
                   </li>
                 ))}
               </ul>
-              <CvButton />
+              <div className="nav-sheet-actions"><CvButton /></div>
             </Glass>
           )}
         </AnimatePresence>

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import { Check, Mail, MapPin, Send } from 'lucide-react'
-import { LinkedinIcon, GithubIcon, GoogleScholarIcon } from './SocialIcons'
+import { LinkedinIcon, GithubIcon, OrcidIcon, ResearchGateIcon, ScholarLogo } from './SocialIcons'
 import Glass from './Glass'
 import CvButton from './CvButton'
 import SectionHead from './SectionHead'
@@ -12,6 +12,7 @@ type Topic = ContactIntent['topic']
 type Status = 'idle' | 'sending' | 'sent' | 'handed-off' | 'error'
 
 const topics: { id: Topic; label: string; prompt: string }[] = [
+  { id: 'hiring', label: 'Hiring', prompt: 'Tell me about the role, the team, and the timeline.' },
   { id: 'query', label: 'Query', prompt: 'What would you like to ask?' },
   { id: 'paper', label: 'Research paper', prompt: 'Anything I should know about your request? (optional)' },
   { id: 'collaboration', label: 'Collaboration', prompt: 'Tell me about the project and how we could work together.' },
@@ -21,7 +22,7 @@ const topics: { id: Topic; label: string; prompt: string }[] = [
 const emptyForm = { name: '', email: '', affiliation: '', message: '' }
 
 export default function Contact() {
-  const [topic, setTopic] = useState<Topic>('query')
+  const [topic, setTopic] = useState<Topic>('hiring')
   const [paper, setPaper] = useState(publications[0].title)
   const [form, setForm] = useState(emptyForm)
   const [status, setStatus] = useState<Status>('idle')
@@ -38,7 +39,7 @@ export default function Contact() {
   }, [])
 
   const current = topics.find((item) => item.id === topic)!
-  const messageRequired = topic === 'query' || topic === 'collaboration'
+  const messageRequired = topic === 'hiring' || topic === 'query' || topic === 'collaboration'
   // Only offer CV as a topic while there is no file to download directly.
   const shownTopics = site.cvFile ? topics.filter((item) => item.id !== 'cv') : topics
 
@@ -99,7 +100,9 @@ export default function Contact() {
   const socials = [
     { href: site.links.linkedin, label: 'LinkedIn', icon: <LinkedinIcon size={16} /> },
     { href: site.links.github, label: 'GitHub', icon: <GithubIcon size={16} /> },
-    { href: site.links.scholar, label: 'Google Scholar', icon: <GoogleScholarIcon size={16} /> },
+    { href: site.links.scholar, label: 'Google Scholar', icon: <ScholarLogo size={18} /> },
+    { href: site.links.researchgate, label: 'ResearchGate', icon: <ResearchGateIcon size={18} /> },
+    { href: site.links.orcid, label: 'ORCID', icon: <OrcidIcon size={18} /> },
   ].filter((social) => social.href)
 
   const finished = status === 'sent' || status === 'handed-off'
@@ -125,7 +128,7 @@ export default function Contact() {
           </div>
         </div>
 
-        <Glass refract={22} className="contact-form">
+        <Glass className="contact-form">
           <AnimatePresence mode="wait" initial={false}>
             {finished ? (
               <motion.div

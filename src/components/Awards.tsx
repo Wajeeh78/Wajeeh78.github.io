@@ -1,16 +1,8 @@
-import { ArrowDownRight, BadgeCheck, GraduationCap, Medal, Presentation, ScrollText, Trophy } from 'lucide-react'
+import { ArrowDownRight, GraduationCap } from 'lucide-react'
 import Glass from './Glass'
 import SectionHead from './SectionHead'
 import { certifications, honors, publications } from '../data/site'
 import { scrollToSection } from '../lib/motion'
-
-const icons = {
-  paper: Trophy,
-  presentation: Presentation,
-  poster: ScrollText,
-  instructor: BadgeCheck,
-  milestone: Medal,
-}
 
 export default function Awards() {
   return (
@@ -19,11 +11,10 @@ export default function Awards() {
 
       <div className="honors">
         {honors.map((honor, i) => {
-          const Icon = icons[honor.kind]
           const paper = publications.find((pub) => pub.id === honor.paper)
           return (
-            <Glass key={honor.title} className="honor" delay={(i % 2) * 0.08}>
-              <span className="honor-icon" aria-hidden="true"><Icon size={20} /></span>
+            <Glass key={honor.title} className={`honor tone-${honor.kind}`} delay={(i % 2) * 0.08}>
+              <span className="honor-icon" aria-hidden="true"><span className="pac-mini pac-lg" /></span>
               <div className="honor-body">
                 <p className="mono-note">{honor.event}</p>
                 <h3 className="honor-title">{honor.title}</h3>

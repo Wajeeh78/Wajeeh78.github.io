@@ -6,10 +6,12 @@ import Hero from './components/Hero'
 import About from './components/About'
 import Research from './components/Research'
 import Awards from './components/Awards'
+import CaseStudy from './components/CaseStudy'
 import Journey from './components/Journey'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
 import { startSmoothScroll } from './lib/motion'
+import ThemeHint from './components/ThemeHint'
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('hero')
@@ -48,12 +50,14 @@ export default function App() {
       <a className="skip-link" href="#about">Skip to content</a>
       <PacmanField />
       <Navbar activeSection={activeSection} />
+      <ThemeHint />
       <main>
         <Hero />
         <About />
         <Research />
-        <Awards />
+        <CaseStudy />
         <Journey />
+        <Awards />
         <Contact />
       </main>
       <Footer />

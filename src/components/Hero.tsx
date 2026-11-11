@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { useRef, type CSSProperties } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { ArrowDown, MapPin } from 'lucide-react'
-import { LinkedinIcon, GithubIcon, GoogleScholarIcon } from './SocialIcons'
+import { ArrowDown, ArrowRight, MapPin } from 'lucide-react'
+import { LinkedinIcon, GithubIcon, OrcidIcon, ResearchGateIcon, ScholarLogo } from './SocialIcons'
 import Glass from './Glass'
 import CvButton from './CvButton'
+import { Mark } from './Badge'
 import { site } from '../data/site'
 import { jelly, liquid, scrollToSection } from '../lib/motion'
 
@@ -36,14 +37,16 @@ export default function Hero() {
   const socials = [
     { href: site.links.linkedin, label: 'LinkedIn', icon: <LinkedinIcon size={17} /> },
     { href: site.links.github, label: 'GitHub', icon: <GithubIcon size={17} /> },
-    { href: site.links.scholar, label: 'Google Scholar', icon: <GoogleScholarIcon size={17} /> },
+    { href: site.links.scholar, label: 'Google Scholar', icon: <ScholarLogo size={19} />, brand: '#4285F4' },
+    { href: site.links.researchgate, label: 'ResearchGate', icon: <ResearchGateIcon size={19} />, brand: '#00CCBB' },
+    { href: site.links.orcid, label: 'ORCID', icon: <OrcidIcon size={19} />, brand: '#A6CE39' },
   ].filter((social) => social.href)
 
   return (
     <section id="hero" ref={ref} className="hero" aria-labelledby="hero-heading">
       <motion.h1 id="hero-heading" className="hero-name" aria-label={site.name} style={{ y: nameY, scale: nameScale }}>
         <Letters text="Wajeeh" delay={0.25} />
-        <Letters text="Ahmed" className="serif" delay={0.5} />
+        <Letters text="Ahmed" className="soft" delay={0.5} />
       </motion.h1>
 
       <motion.div style={{ y: cardY }} className="hero-card-wrap">
@@ -59,12 +62,20 @@ export default function Hero() {
             <p className="eyebrow">AI/ML Researcher · SZABIST Islamabad · AI-EYS</p>
             <p className="hero-lede">
               I build, test, and work on systems that defend networks, from websites to industrial systems. Award-winning
-              researcher with <strong>Best Paper</strong>, <strong>Best Presentation</strong>, and{' '}
-              <strong>Best Poster</strong> wins, and I'm open to research and industry roles.
+              researcher with <Mark>Best Paper</Mark>, <Mark>Best Presentation</Mark>, and{' '}
+              <Mark>Best Poster</Mark> wins, and I'm open to research and industry roles.
             </p>
             <p className="hero-meta">
               <MapPin size={14} /> {site.location}
             </p>
+            <div className="hero-paths">
+              <button className="btn btn-link" onClick={() => scrollToSection('case-study')}>
+                Hiring? See what I've built <ArrowRight size={14} />
+              </button>
+              <button className="btn btn-link" onClick={() => scrollToSection('research')}>
+                Research collaboration <ArrowRight size={14} />
+              </button>
+            </div>
           </div>
           <div className="hero-card-actions">
             <CvButton />
@@ -84,10 +95,11 @@ export default function Hero() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="icon-btn"
+                  className={`icon-btn ${'brand' in social ? 'brand' : ''}`}
+                  style={'brand' in social ? ({ '--brand': social.brand } as CSSProperties) : undefined}
                   aria-label={social.label}
                   title={social.label}
-                  whileHover={{ scale: 1.14, y: -2 }}
+                  whileHover={'brand' in social ? { scale: 1.16, y: -3, rotate: [0, -14, 10, -5, 0] } : { scale: 1.14, y: -2 }}
                   whileTap={{ scale: 0.9 }}
                   transition={jelly}
                 >

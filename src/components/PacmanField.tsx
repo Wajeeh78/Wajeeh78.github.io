@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { THEME_EVENT, getTheme } from '../lib/theme'
 
 /* ─── The page background: a living Pac-Man maze on a fixed canvas ─────
    Everyone navigates with breadth-first search. Pac-Man eats the dots
@@ -16,6 +17,33 @@ interface Actor {
   ny: number
   t: number
   dir: number[]
+  /** Drawn position and facing. They ease toward the logical ones, so turns are rounded, not snapped. */
+  rx?: number
+  ry?: number
+  ra?: number
+}
+
+/* Movement speeds in tiles per second. Kept calm so the maze reads as ambience, not a game. */
+const PAC_SPEED = 2.7
+const GHOST_SPEED = 2.2
+const GHOST_SCARED_SPEED = 1.5
+
+/** Eases an actor's drawn position and angle toward where it really is. */
+function settle(actor: Actor, dt: number) {
+  const x = actor.x + (actor.nx - actor.x) * actor.t
+  const y = actor.y + (actor.ny - actor.y) * actor.t
+  if (actor.rx === undefined || actor.ry === undefined || Math.hypot(x - actor.rx, y - actor.ry) > 1.5) {
+    actor.rx = x
+    actor.ry = y
+  } else {
+    const k = 1 - Math.exp(-dt * 14)
+    actor.rx += (x - actor.rx) * k
+    actor.ry += (y - actor.ry) * k
+  }
+  const target = Math.atan2(actor.dir[1], actor.dir[0])
+  if (actor.ra === undefined) actor.ra = target
+  const turn = Math.atan2(Math.sin(target - actor.ra), Math.cos(target - actor.ra))
+  actor.ra += turn * (1 - Math.exp(-dt * 12))
 }
 
 function mulberry(seed: number) {
@@ -72,6 +100,13 @@ function buildMaze(cols: number, rows: number) {
   return grid
 }
 
+/* Maze colours per theme. Pac-Man and the ghosts keep their colours in both. */
+const PALETTES = {
+  dark: { wallGlow: 'rgba(130, 140, 170, 0.07)', wall: 'rgba(170, 178, 205, 0.2)', dot: '#e5e5ea', dotAlpha: 0.45, power: '#ffcc00', pupil: '#1d1d1f', glow: 1 },
+  light: { wallGlow: 'rgba(0, 0, 0, 0.025)', wall: 'rgba(0, 0, 0, 0.11)', dot: '#6e6e73', dotAlpha: 0.5, power: '#e0a800', pupil: '#1d1d1f', glow: 0.55 },
+}
+const PAC = '#ffcc00'
+
 function glowSprite(color: string, size: number) {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
@@ -100,6 +135,7 @@ export default function PacmanField() {
     let grid = new Uint8Array(0), dots = new Uint8Array(0), power = new Uint8Array(0)
     let prev = new Int32Array(0), queue = new Int32Array(0)
     let walls: HTMLCanvasElement | null = null
+    let pal = PALETTES[getTheme()]
     let scrollTarget = 0, scrollY = 0, docHeight = 1
     let score = 0, frightened = 0, deadFor = 0, dotAlpha = 1, dotsLeft = 0
     let pointerTile = -1, pointerUntil = 0, sizeKey = ''
@@ -222,10 +258,10 @@ export default function PacmanField() {
           }
         }
       }
-      c.strokeStyle = 'rgba(92, 112, 255, 0.10)'
+      c.strokeStyle = pal.wallGlow
       c.lineWidth = 9
       c.stroke()
-      c.strokeStyle = 'rgba(128, 146, 255, 0.28)'
+      c.strokeStyle = pal.wall
       c.lineWidth = 1.5
       c.stroke()
       walls = off
@@ -303,9 +339,11 @@ export default function PacmanField() {
     function update(dt: number, now: number) {
       const span = Math.max(1, docHeight - vh)
       scrollTarget = (window.scrollY / span) * Math.max(0, rows * cell - vh)
-      scrollY += (scrollTarget - scrollY) * (1 - Math.exp(-dt * 7))
+      scrollY += (scrollTarget - scrollY) * (1 - Math.exp(-dt * 5))
       dotAlpha = Math.min(1, dotAlpha + dt * 1.2)
       frightened = Math.max(0, frightened - dt)
+      settle(pac, dt)
+      for (const ghost of ghosts) settle(ghost, dt)
 
       if (deadFor > 0) {
         deadFor -= dt
@@ -313,7 +351,7 @@ export default function PacmanField() {
         return
       }
 
-      advance(pac, 4.6, dt, () => steerPac(now))
+      advance(pac, PAC_SPEED, dt, () => steerPac(now))
       const tile = idx(pac.x, pac.y)
       if (dots[tile]) {
         dots[tile] = 0
@@ -330,7 +368,7 @@ export default function PacmanField() {
       const px = pac.x + (pac.nx - pac.x) * pac.t
       const py = pac.y + (pac.ny - pac.y) * pac.t
       for (const ghost of ghosts) {
-        advance(ghost, frightened > 0 ? 2.5 : 3.7, dt, () => steerGhost(ghost))
+        advance(ghost, frightened > 0 ? GHOST_SCARED_SPEED : GHOST_SPEED, dt, () => steerGhost(ghost))
         const gx = ghost.x + (ghost.nx - ghost.x) * ghost.t
         const gy = ghost.y + (ghost.ny - ghost.y) * ghost.t
         if (Math.hypot(gx - px, gy - py) < 0.62) {
@@ -354,13 +392,15 @@ export default function PacmanField() {
 
     function drawPac(time: number) {
       const size = cell * 0.36
-      const x = originX + (pac.x + (pac.nx - pac.x) * pac.t) * cell + cell / 2
-      const y = (pac.y + (pac.ny - pac.y) * pac.t) * cell + cell / 2 - scrollY
-      ctx!.drawImage(glow('#ffd60a'), x - cell * 1.2, y - cell * 1.2, cell * 2.4, cell * 2.4)
-      const angle = Math.atan2(pac.dir[1], pac.dir[0])
+      const x = originX + (pac.rx ?? pac.x) * cell + cell / 2
+      const y = (pac.ry ?? pac.y) * cell + cell / 2 - scrollY
+      ctx!.globalAlpha = pal.glow
+      ctx!.drawImage(glow(PAC), x - cell * 1.2, y - cell * 1.2, cell * 2.4, cell * 2.4)
+      ctx!.globalAlpha = 1
+      const angle = pac.ra ?? Math.atan2(pac.dir[1], pac.dir[0])
       const dying = deadFor > 0 ? deadFor / 0.9 : 1
-      const mouth = deadFor > 0 ? (1 - dying) * Math.PI : (Math.sin(time * 0.016) * 0.5 + 0.5) * 0.72 + 0.04
-      ctx!.fillStyle = '#ffd60a'
+      const mouth = deadFor > 0 ? (1 - dying) * Math.PI : (Math.sin(time * 0.01) * 0.5 + 0.5) * 0.66 + 0.06
+      ctx!.fillStyle = PAC
       ctx!.beginPath()
       ctx!.moveTo(x, y)
       ctx!.arc(x, y, size, angle + mouth, angle + Math.PI * 2 - mouth)
@@ -370,19 +410,21 @@ export default function PacmanField() {
 
     function drawGhost(ghost: (typeof ghosts)[number], time: number) {
       const size = cell * 0.33
-      const x = originX + (ghost.x + (ghost.nx - ghost.x) * ghost.t) * cell + cell / 2
-      const y = (ghost.y + (ghost.ny - ghost.y) * ghost.t) * cell + cell / 2 - scrollY
+      const x = originX + (ghost.rx ?? ghost.x) * cell + cell / 2
+      const y = (ghost.ry ?? ghost.y) * cell + cell / 2 - scrollY
       if (y < -cell || y > vh + cell) return
       const scared = frightened > 0 && (frightened > 2 || Math.floor(time / 180) % 2 === 0)
       const color = scared ? FRIGHTENED : ghost.color
       const c = ctx!
+      c.globalAlpha = pal.glow
       c.drawImage(glow(color), x - cell, y - cell, cell * 2, cell * 2)
+      c.globalAlpha = 1
       c.fillStyle = color
       c.beginPath()
       c.arc(x, y - size * 0.1, size, Math.PI, 0)
       const foot = y + size * 0.95
       c.lineTo(x + size, foot)
-      const ripple = Math.sin(time * 0.012) * size * 0.14
+      const ripple = Math.sin(time * 0.008) * size * 0.14
       for (let i = 0; i < 3; i++) {
         const right = x + size - (i * 2 * size) / 3
         c.quadraticCurveTo(right - size / 3, foot - size * 0.32 + ripple, right - (2 * size) / 3, foot)
@@ -395,7 +437,7 @@ export default function PacmanField() {
         c.arc(x + side * size * 0.38, y - size * 0.18, size * 0.26, 0, Math.PI * 2)
         c.fill()
       }
-      c.fillStyle = '#11132e'
+      c.fillStyle = pal.pupil
       for (const side of [-1, 1]) {
         c.beginPath()
         c.arc(x + side * size * 0.38 + ghost.dir[0] * size * 0.11, y - size * 0.18 + ghost.dir[1] * size * 0.11, size * 0.13, 0, Math.PI * 2)
@@ -411,8 +453,8 @@ export default function PacmanField() {
 
       const firstRow = Math.max(0, Math.floor(scrollY / cell))
       const lastRow = Math.min(rows - 1, Math.ceil((scrollY + vh) / cell))
-      c.globalAlpha = dotAlpha * 0.5
-      c.fillStyle = '#ffe9a8'
+      c.globalAlpha = dotAlpha * pal.dotAlpha
+      c.fillStyle = pal.dot
       c.beginPath()
       for (let y = firstRow; y <= lastRow; y++) {
         for (let x = 0; x < cols; x++) {
@@ -426,13 +468,16 @@ export default function PacmanField() {
       c.fill()
 
       c.globalAlpha = dotAlpha
-      const pulse = 5 + Math.sin(time * 0.005) * 1.5
+      const pulse = 5 + Math.sin(time * 0.004) * 1.5
+      c.fillStyle = pal.power
       for (let y = firstRow; y <= lastRow; y++) {
         for (let x = 0; x < cols; x++) {
           if (!power[idx(x, y)]) continue
           const px = originX + x * cell + cell / 2
           const py = y * cell + cell / 2 - scrollY
-          c.drawImage(glow('#ffd60a'), px - 22, py - 22, 44, 44)
+          c.globalAlpha = dotAlpha * pal.glow
+          c.drawImage(glow(PAC), px - 22, py - 22, 44, 44)
+          c.globalAlpha = dotAlpha
           c.beginPath()
           c.arc(px, py, pulse, 0, Math.PI * 2)
           c.fill()
@@ -444,9 +489,6 @@ export default function PacmanField() {
       drawPac(time)
     }
 
-    resize()
-    scrollY = (window.scrollY / Math.max(1, docHeight - vh)) * Math.max(0, rows * cell - vh)
-
     const onResize = () => resize()
     const onPointer = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || !cols) return
@@ -455,7 +497,13 @@ export default function PacmanField() {
       pointerTile = tileNearCentre(x, y)
       pointerUntil = performance.now() + 2500
     }
+    const onTheme = () => {
+      pal = PALETTES[getTheme()]
+      if (cols) drawWalls()
+      if (still) draw(0)
+    }
     window.addEventListener('resize', onResize)
+    window.addEventListener(THEME_EVENT, onTheme)
     window.addEventListener('pointermove', onPointer, { passive: true })
     const pageObserver = new ResizeObserver(() => {
       docHeight = document.documentElement.scrollHeight
@@ -493,16 +541,26 @@ export default function PacmanField() {
       draw(time)
     }
 
-    if (still) {
-      dotAlpha = 1
-      draw(0)
-    } else {
-      raf = requestAnimationFrame(loop)
+    // Build the maze after the page has painted, so the name and text show up first.
+    const boot = () => {
+      resize()
+      scrollY = (window.scrollY / Math.max(1, docHeight - vh)) * Math.max(0, rows * cell - vh)
+      canvas.classList.add('is-ready')
+      if (still) {
+        dotAlpha = 1
+        draw(0)
+      } else {
+        raf = requestAnimationFrame(loop)
+      }
     }
+    const bootId = 'requestIdleCallback' in window ? window.requestIdleCallback(boot, { timeout: 500 }) : (setTimeout(boot, 120) as unknown as number)
 
     return () => {
+      if ('cancelIdleCallback' in window) window.cancelIdleCallback(bootId)
+      else clearTimeout(bootId)
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener(THEME_EVENT, onTheme)
       window.removeEventListener('pointermove', onPointer)
       pageObserver.disconnect()
     }

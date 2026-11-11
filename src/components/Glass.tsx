@@ -28,7 +28,7 @@ function filterHost() {
 }
 
 function drawMap(width: number, height: number, radius: number, bezel: number) {
-  const scale = 0.5 // the map is smooth, so half resolution is plenty
+  const scale = 0.25 // the map is smooth, so quarter resolution is plenty and 4x cheaper
   const w = Math.max(2, Math.round(width * scale))
   const h = Math.max(2, Math.round(height * scale))
   const r = Math.min(radius, width / 2, height / 2) * scale
@@ -100,10 +100,16 @@ function useRefraction(ref: RefObject<HTMLElement | null>, depth: number | undef
     filterHost().appendChild(filter)
 
     let timer = 0
+    let idle = 0
+    let lastSize = ''
     const apply = () => {
       const width = el.offsetWidth
       const height = el.offsetHeight
       if (!width || !height) return
+      // Building the map is the costly part, so skip it when nothing changed.
+      const size = `${width}x${height}`
+      if (size === lastSize) return
+      lastSize = size
       const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0
       for (const node of [filter, image]) {
         node.setAttribute('x', '0')
@@ -114,15 +120,21 @@ function useRefraction(ref: RefObject<HTMLElement | null>, depth: number | undef
       image.setAttribute('href', drawMap(width, height, radius, Math.min(26, height / 2.4)))
       el.style.backdropFilter = `blur(14px) url(#${id}) saturate(175%) brightness(1.06)`
     }
+    // Build the map when the browser is idle, so it never lands in the middle of a scroll.
+    const whenIdle = (fn: () => void) =>
+      'requestIdleCallback' in window ? window.requestIdleCallback(fn, { timeout: 1500 }) : (setTimeout(fn, 200) as unknown as number)
     const observer = new ResizeObserver(() => {
       clearTimeout(timer)
-      timer = window.setTimeout(apply, 120)
+      timer = window.setTimeout(() => {
+        idle = whenIdle(apply)
+      }, 200)
     })
     observer.observe(el)
-    apply()
+    idle = whenIdle(apply)
 
     return () => {
       clearTimeout(timer)
+      if ('cancelIdleCallback' in window) window.cancelIdleCallback(idle)
       observer.disconnect()
       filter.remove()
       el.style.backdropFilter = ''

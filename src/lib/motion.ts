@@ -29,7 +29,7 @@ export function scrollToSection(id: string) {
 
 /* Lets a "Request this paper" button anywhere on the page fill in the form. */
 export interface ContactIntent {
-  topic: 'query' | 'paper' | 'collaboration' | 'cv'
+  topic: 'hiring' | 'query' | 'paper' | 'collaboration' | 'cv'
   paper?: string
 }
 
