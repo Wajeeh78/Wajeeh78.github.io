@@ -5,6 +5,7 @@ import { LinkedinIcon, GithubIcon, OrcidIcon, ResearchGateIcon, ScholarLogo } fr
 import Glass from './Glass'
 import CvButton from './CvButton'
 import SectionHead from './SectionHead'
+import LocalTime from './LocalTime'
 import { publications, site } from '../data/site'
 import { CONTACT_EVENT, jelly, liquid, type ContactIntent } from '../lib/motion'
 
@@ -118,6 +119,7 @@ export default function Contact() {
           </p>
           <a className="contact-line" href={`mailto:${site.email}`}><Mail size={17} /> {site.email}</a>
           <p className="contact-line"><MapPin size={17} /> {site.location}</p>
+          <p className="contact-line contact-time"><LocalTime /></p>
           <div className="contact-actions">
             <CvButton />
             {socials.map((social) => (

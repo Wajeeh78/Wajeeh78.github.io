@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { THEME_EVENT, getTheme } from '../lib/theme'
+import { getGame, input, setGame, subscribeGame } from '../lib/game'
 
 /* ─── The page background: a living Pac-Man maze on a fixed canvas ─────
    Everyone navigates with breadth-first search. Pac-Man eats the dots
    currently on screen and follows the cursor, ghosts hunt Pac-Man, and
-   the maze drifts as the page scrolls. */
+   the maze drifts as the page scrolls. In play mode (lib/game) the visitor
+   steers Pac-Man instead, in the same canvas and the same animation loop. */
 
 const GHOST_COLORS = ['#ff4d6d', '#ff8ad8', '#4de8ff', '#ffa94d']
 const FRIGHTENED = '#6d7dff'
@@ -27,6 +29,9 @@ interface Actor {
 const PAC_SPEED = 2.7
 const GHOST_SPEED = 2.2
 const GHOST_SCARED_SPEED = 1.5
+/* Play mode is quicker, and the ghosts speed up each level. */
+const PLAY_PAC_SPEED = 4.8
+const playGhostSpeed = (level: number) => Math.min(3.4 + level * 0.25, 4.6)
 
 /** Eases an actor's drawn position and angle toward where it really is. */
 function settle(actor: Actor, dt: number) {
@@ -121,7 +126,6 @@ function glowSprite(color: string, size: number) {
 
 export default function PacmanField() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const scoreRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -139,6 +143,7 @@ export default function PacmanField() {
     let scrollTarget = 0, scrollY = 0, docHeight = 1
     let score = 0, frightened = 0, deadFor = 0, dotAlpha = 1, dotsLeft = 0
     let pointerTile = -1, pointerUntil = 0, sizeKey = ''
+    let wasPlaying = false, readyLeft = 0
     const pac: Actor = { x: 1, y: 1, nx: 1, ny: 1, t: 0, dir: [1, 0] }
     let ghosts: (Actor & { color: string; chase: number })[] = []
     const glows = new Map<string, HTMLCanvasElement>()
@@ -300,7 +305,19 @@ export default function PacmanField() {
       return y >= top && y <= top + vh / cell
     }
 
+    /* Arcade rules: turn into the requested direction as soon as the maze allows,
+       otherwise keep going straight, otherwise stop at the wall. */
+    function steerPlayer() {
+      const want = input.want
+      if (want && open(pac.x + want[0], pac.y + want[1])) return moveTo(pac, idx(pac.x + want[0], pac.y + want[1]))
+      const [dx, dy] = pac.dir
+      if (open(pac.x + dx, pac.y + dy)) return moveTo(pac, idx(pac.x + dx, pac.y + dy))
+      pac.nx = pac.x
+      pac.ny = pac.y
+    }
+
     function steerPac(now: number) {
+      if (getGame().playing) return steerPlayer()
       const from = idx(pac.x, pac.y)
       const danger = (i: number) => {
         if (frightened > 0) return false
@@ -326,20 +343,57 @@ export default function PacmanField() {
     }
 
     function advance(actor: Actor, speed: number, dt: number, steer: () => void) {
-      if (actor.x === actor.nx && actor.y === actor.ny) steer()
+      const parked = () => actor.x === actor.nx && actor.y === actor.ny
+      if (parked()) {
+        steer()
+        if (parked()) {
+          actor.t = 0
+          return
+        }
+      }
       actor.t += speed * dt
       while (actor.t >= 1) {
         actor.t -= 1
         actor.x = actor.nx
         actor.y = actor.ny
         steer()
+        if (parked()) {
+          actor.t = 0
+          break
+        }
       }
     }
 
+    function enterPlay() {
+      refillDots()
+      placeActors()
+      frightened = 0
+      deadFor = 0
+      readyLeft = 1.6
+    }
+
+    function leavePlay() {
+      refillDots()
+      placeActors()
+      frightened = 0
+      deadFor = 0
+    }
+
     function update(dt: number, now: number) {
+      const game = getGame()
+      if (game.playing !== wasPlaying) {
+        wasPlaying = game.playing
+        if (game.playing) enterPlay()
+        else leavePlay()
+      }
+      const playing = game.playing
       const span = Math.max(1, docHeight - vh)
-      scrollTarget = (window.scrollY / span) * Math.max(0, rows * cell - vh)
-      scrollY += (scrollTarget - scrollY) * (1 - Math.exp(-dt * 5))
+      const mazeScroll = Math.max(0, rows * cell - vh)
+      // While playing, the camera follows Pac-Man; otherwise the maze drifts with the page.
+      scrollTarget = playing
+        ? Math.min(Math.max((pac.ry ?? pac.y) * cell + cell / 2 - vh / 2, 0), mazeScroll)
+        : (window.scrollY / span) * mazeScroll
+      scrollY += (scrollTarget - scrollY) * (1 - Math.exp(-dt * (playing ? 6 : 5)))
       dotAlpha = Math.min(1, dotAlpha + dt * 1.2)
       frightened = Math.max(0, frightened - dt)
       settle(pac, dt)
@@ -347,11 +401,36 @@ export default function PacmanField() {
 
       if (deadFor > 0) {
         deadFor -= dt
-        if (deadFor <= 0) placeActors()
+        if (deadFor <= 0) {
+          if (playing && getGame().lives <= 0) {
+            setGame({ over: true })
+            deadFor = 0
+          } else {
+            placeActors()
+            if (playing) readyLeft = 1
+          }
+        }
+        return
+      }
+      if (playing && (game.over || readyLeft > 0)) {
+        if (readyLeft > 0) {
+          readyLeft -= dt
+          if (readyLeft <= 0 && game.ready) setGame({ ready: 0 })
+        }
         return
       }
 
-      advance(pac, PAC_SPEED, dt, () => steerPac(now))
+      // Reversing is instant, like the arcade game.
+      const want = input.want
+      const moving = pac.nx !== pac.x || pac.ny !== pac.y
+      if (playing && want && moving && want[0] === -pac.dir[0] && want[1] === -pac.dir[1]) {
+        ;[pac.x, pac.nx] = [pac.nx, pac.x]
+        ;[pac.y, pac.ny] = [pac.ny, pac.y]
+        pac.t = 1 - pac.t
+        pac.dir = [want[0], want[1]]
+      }
+
+      advance(pac, playing ? PLAY_PAC_SPEED : PAC_SPEED, dt, () => steerPac(now))
       const tile = idx(pac.x, pac.y)
       if (dots[tile]) {
         dots[tile] = 0
@@ -360,15 +439,24 @@ export default function PacmanField() {
       }
       if (power[tile]) {
         power[tile] = 0
-        frightened = 7
+        frightened = playing ? 6 : 7
         addScore(50)
       }
-      if (dotsLeft <= 0) refillDots()
+      if (dotsLeft <= 0) {
+        refillDots()
+        if (playing) {
+          setGame({ level: getGame().level + 1 })
+          addScore(1000)
+          placeActors()
+          readyLeft = 1.2
+        }
+      }
 
       const px = pac.x + (pac.nx - pac.x) * pac.t
       const py = pac.y + (pac.ny - pac.y) * pac.t
       for (const ghost of ghosts) {
-        advance(ghost, frightened > 0 ? GHOST_SCARED_SPEED : GHOST_SPEED, dt, () => steerGhost(ghost))
+        const speed = playing ? (frightened > 0 ? GHOST_SCARED_SPEED + 0.6 : playGhostSpeed(game.level)) : frightened > 0 ? GHOST_SCARED_SPEED : GHOST_SPEED
+        advance(ghost, speed, dt, () => steerGhost(ghost))
         const gx = ghost.x + (ghost.nx - ghost.x) * ghost.t
         const gy = ghost.y + (ghost.ny - ghost.y) * ghost.t
         if (Math.hypot(gx - px, gy - py) < 0.62) {
@@ -380,14 +468,20 @@ export default function PacmanField() {
             ghost.t = 0
           } else {
             deadFor = 0.9
+            if (playing) setGame({ lives: getGame().lives - 1 })
+            break
           }
         }
       }
     }
 
     function addScore(points: number) {
+      if (getGame().playing) {
+        setGame({ score: getGame().score + points })
+        return
+      }
       score += points
-      if (scoreRef.current) scoreRef.current.textContent = score.toLocaleString('en-US')
+      setGame({ ambient: score })
     }
 
     function drawPac(time: number) {
@@ -491,7 +585,7 @@ export default function PacmanField() {
 
     const onResize = () => resize()
     const onPointer = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' || !cols) return
+      if (event.pointerType !== 'mouse' || !cols || getGame().playing) return
       const x = Math.floor((event.clientX - originX) / cell)
       const y = Math.floor((event.clientY + scrollY) / cell)
       pointerTile = tileNearCentre(x, y)
@@ -553,12 +647,30 @@ export default function PacmanField() {
         raf = requestAnimationFrame(loop)
       }
     }
+    // With reduced motion the maze is a still picture, but a game the visitor starts still has to run.
+    const unsubscribe = still
+      ? (() => {
+          let running = false
+          return subscribeGame((g) => {
+            if (g.playing && !running) {
+              running = true
+              raf = requestAnimationFrame(loop)
+            } else if (!g.playing && running) {
+              running = false
+              cancelAnimationFrame(raf)
+              update(0, performance.now())
+              draw(0)
+            }
+          })
+        })()
+      : () => {}
     const bootId = 'requestIdleCallback' in window ? window.requestIdleCallback(boot, { timeout: 500 }) : (setTimeout(boot, 120) as unknown as number)
 
     return () => {
       if ('cancelIdleCallback' in window) window.cancelIdleCallback(bootId)
       else clearTimeout(bootId)
       cancelAnimationFrame(raf)
+      unsubscribe()
       window.removeEventListener('resize', onResize)
       window.removeEventListener(THEME_EVENT, onTheme)
       window.removeEventListener('pointermove', onPointer)
@@ -571,10 +683,6 @@ export default function PacmanField() {
       <div className="aurora"><i /><i /><i /></div>
       <canvas ref={canvasRef} className="field-canvas" />
       <div className="field-vignette" />
-      <div className="field-score">
-        <span className="field-score-pac" />
-        <span ref={scoreRef}>0</span>
-      </div>
     </div>
   )
 }

@@ -39,3 +39,10 @@ export function openContact(intent: ContactIntent) {
   window.dispatchEvent(new CustomEvent<ContactIntent>(CONTACT_EVENT, { detail: intent }))
   scrollToSection('contact')
 }
+
+/* Freezes page scrolling while the Pac-Man game is on. */
+export function lockScroll(locked: boolean) {
+  if (locked) lenis?.stop()
+  else lenis?.start()
+  document.documentElement.classList.toggle('is-playing', locked)
+}

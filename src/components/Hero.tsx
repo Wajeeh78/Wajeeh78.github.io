@@ -5,6 +5,7 @@ import { LinkedinIcon, GithubIcon, OrcidIcon, ResearchGateIcon, ScholarLogo } fr
 import Glass from './Glass'
 import CvButton from './CvButton'
 import { Mark } from './Badge'
+import LocalTime from './LocalTime'
 import { site } from '../data/site'
 import { jelly, liquid, scrollToSection } from '../lib/motion'
 
@@ -66,7 +67,8 @@ export default function Hero() {
               <Mark>Best Poster</Mark> wins, and I'm open to research and industry roles.
             </p>
             <p className="hero-meta">
-              <MapPin size={14} /> {site.location}
+              <span className="hero-meta-item"><MapPin size={14} /> {site.location}</span>
+              <LocalTime compact />
             </p>
             <div className="hero-paths">
               <button className="btn btn-link" onClick={() => scrollToSection('case-study')}>

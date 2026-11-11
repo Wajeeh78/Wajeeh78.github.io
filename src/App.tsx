@@ -12,6 +12,8 @@ import Contact from './components/Contact'
 import Footer from './components/Footer'
 import { startSmoothScroll } from './lib/motion'
 import ThemeHint from './components/ThemeHint'
+import StatsDock from './components/StatsDock'
+import GameOverlay from './components/GameOverlay'
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('hero')
@@ -51,6 +53,8 @@ export default function App() {
       <PacmanField />
       <Navbar activeSection={activeSection} />
       <ThemeHint />
+      <StatsDock />
+      <GameOverlay />
       <main>
         <Hero />
         <About />
